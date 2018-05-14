@@ -1,0 +1,121 @@
+ 
+import numpy as np
+import matplotlib.pyplot as plt
+
+# define the sigmoid function
+def sigmoid(x, derivative=False):
+
+    if (derivative == True):
+        return x * (1 - x)
+    else:
+        return 1 / (1 + np.exp(-x))
+
+# choose a random seed for reproducible results
+np.random.seed(1)
+
+#####################################################
+#########         Initial parameters        #########
+#####################################################
+
+# learning rate
+alpha = 0.1
+
+# number of neurons in the hidden layer
+num_hidden = 3
+
+# epochs
+num_iterations = 10
+
+# error list
+output_error_list = []
+
+#####################################################
+#########           Read Data               #########
+#####################################################
+
+# Input Data 
+X = np.array([  
+	[29,0,1.83,1,0,98],
+	[33,0,1.85,1,0,85],
+	[27,1,1.85,1,0,100],
+	[25,0,1.77,0,0,62],
+	[36,1,1.81,1,0,96],
+	[25,0,1.60,0,0,68],
+	[30,0,1.80,1,1,80],
+	[23,0,1.83,1,0,95],
+	[30,0,1.72,0,0,92],
+	[25,1,1.87,0,0,78],
+	[40,1,1.60,0,1,58],
+	[26,1,1.65,0,1,68],
+])
+
+# Output data
+# transpose
+y = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1]]).T
+
+#####################################################
+#########     Initial random weights        #########
+#####################################################
+
+# initialize weights randomly with mean 0 and range [-1, 1]
+# the +1 in the 1st dimension of the weight matrices is for the bias weight
+hidden_weights = 2*np.random.random((X.shape[1] + 1, num_hidden)) - 1
+output_weights = 2*np.random.random((num_hidden + 1, y.shape[1])) - 1
+
+
+
+#####################################################
+#########              Training             #########
+#####################################################
+
+for i in range(num_iterations):
+
+    # forward phase
+    # np.hstack((np.ones(...), X) adds a fixed input of 1 for the bias weight
+    input_layer_outputs = np.hstack((np.ones((X.shape[0], 1)), X))
+    hidden_layer_outputs = np.hstack((np.ones((X.shape[0], 1)), sigmoid(np.dot(input_layer_outputs, hidden_weights))))
+    output_layer_outputs = np.dot(hidden_layer_outputs, output_weights)
+
+    # backward phase
+    # output layer error term
+    output_error = output_layer_outputs - y
+    mean_output_error = np.mean(np.abs(output_error))
+    output_error_list.append(mean_output_error)
+
+    if(i % 1000) == 0:
+        print("Error: " + str(mean_output_error))
+    
+    # hidden layer error term
+    # [:, 1:] removes the bias term from the backpropagation
+    hidden_error = hidden_layer_outputs[:, 1:] * (1 - hidden_layer_outputs[:, 1:]) * np.dot(output_error, output_weights.T[:, 1:])
+
+    # partial derivatives
+    hidden_pd = input_layer_outputs[:, :, np.newaxis] * hidden_error[: , np.newaxis, :]
+    output_pd = hidden_layer_outputs[:, :, np.newaxis] * output_error[:, np.newaxis, :]
+
+    # delta gradients
+    total_hidden_gradient = np.average(hidden_pd, axis=0)
+    total_output_gradient = np.average(output_pd, axis=0)
+
+    # update weights
+    hidden_weights += - alpha * total_hidden_gradient
+    output_weights += - alpha * total_output_gradient
+
+
+#####################################################
+#########              Output               #########
+#####################################################
+
+# print the final outputs of the neural network on the inputs X
+print("Training: \n{}".format(output_layer_outputs))
+pred = np.average(np.around(output_layer_outputs) == y)
+print("\n Training accuracy: {}%".format(pred*100))
+
+# plot the error over time
+plt.style.use("ggplot")
+plt.figure()
+plt.plot(np.arange(0, num_iterations), output_error_list)
+plt.title("Training error")
+plt.xlabel("Epoch #")
+plt.ylabel("Error")
+plt.show()
